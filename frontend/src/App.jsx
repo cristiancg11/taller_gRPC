@@ -75,6 +75,30 @@ class TacticalAudio {
 
 const audioSys = new TacticalAudio()
 
+// Helper to translate drone operational status to Spanish
+const translateStatus = (status) => {
+  switch (status) {
+    case 'INTERCEPTING': return 'INTERCEPTANDO'
+    case 'LOCKED': return 'FIJADO'
+    case 'SEARCHING': return 'EXPLORANDO'
+    case 'DEFENSIVE_ORBIT': return 'EN ÓRBITA'
+    case 'RETURNING': return 'RETORNANDO'
+    default: return status
+  }
+}
+
+// Helper to translate tactical commands to Spanish
+const translateAction = (action) => {
+  switch (action) {
+    case 'ENGAGE': return 'INTERCEPTAR'
+    case 'DEFENSIVE_ORBIT': return 'ÓRBITA DEFENSIVA'
+    case 'SEARCH_PERIMETER': return 'BÚSQUEDA PERÍMETRO'
+    case 'ABORT': return 'ABORTAR'
+    case 'SPAWN_THREAT': return 'LANZAR AMENAZA'
+    default: return action
+  }
+}
+
 export default function App() {
   const [telemetry, setTelemetry] = useState(null)
   const [metrics, setMetrics] = useState({
@@ -262,10 +286,10 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-wider text-slate-100 font-tactical flex items-center gap-2">
-              AEGIS-SWARM AI <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">C2 CORE</span>
+              AEGIS-SWARM AI <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">CENTRO DE CONTROL C2</span>
             </h1>
             <p className="text-xs text-slate-400">
-              Tactical Drone Air Defense & Kinematic Telemetry Control Center // gRPC + Protobuf over HTTP/2
+              Centro de Control de Telemetría Cinemática y Defensa Aérea de Drones // gRPC + Protobuf sobre HTTP/2
             </p>
           </div>
         </div>
@@ -278,12 +302,12 @@ export default function App() {
               : 'bg-emerald-500/20 border-emerald-500 text-emerald-400 glow-green'
           }`}>
             <span className="inline-block w-2.5 h-2.5 rounded-full bg-current animate-pulse"></span>
-            {threatActive ? 'DEFCON 1 // HOSTILE CONTACT' : 'DEFCON 4 // AIRSPACE SECURE'}
+            {threatActive ? 'DEFCON 1 // CONTACTO HOSTIL DETECTADO' : 'DEFCON 4 // ESPACIO AÉREO ASEGURADO'}
           </div>
 
           <div className="px-3 py-1 bg-slate-900 border border-slate-700 rounded text-xs flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 shadow-[0_0_8px_#22c55e]' : 'bg-red-500'}`}></span>
-            <span className="text-slate-300 font-mono">PORT 50051: {connected ? 'ACTIVE (HTTP/2)' : 'OFFLINE'}</span>
+            <span className="text-slate-300 font-mono">PUERTO 50051: {connected ? 'ACTIVO (HTTP/2)' : 'DESCONECTADO'}</span>
           </div>
 
           <button 
@@ -293,9 +317,9 @@ export default function App() {
               if (!audioEnabled) audioSys.playPing()
             }}
             className="px-2.5 py-1 text-xs border border-slate-700 hover:border-emerald-500 rounded bg-slate-900 text-slate-300 transition-colors"
-            title="Toggle Tactical Audio Feedback"
+            title="Activar/Desactivar Sonido Táctico"
           >
-            {audioEnabled ? '🔊 SONAR ON' : '🔇 MUTED'}
+            {audioEnabled ? '🔊 SONAR ACTIVADO' : '🔇 SONAR SILENCIADO'}
           </button>
         </div>
       </header>
@@ -312,16 +336,16 @@ export default function App() {
                   RADAR TÁCTICO 360° // SECTOR ALPHA-7
                 </span>
                 <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
-                  RANGE: {radarRangeKm} KM
+                  ALCANCE: {radarRangeKm} KM
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] text-slate-400">CLICK EN EL RADAR PARA SPAWN MANUAL</span>
+                <span className="text-[10px] text-slate-400">CLIC EN EL RADAR PARA LANZAR AMENAZA MANUAL</span>
                 <button 
                   onClick={() => setRadarRangeKm(r => r === 50 ? 75 : (r === 75 ? 30 : 50))}
                   className="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-700 text-cyan-400"
                 >
-                  ZOOM RANGE
+                  CAMBIAR ESCALA
                 </button>
               </div>
             </div>
@@ -352,7 +376,7 @@ export default function App() {
                     </span>
                   </div>
                   <div className="font-mono text-xs">
-                    DIST: <span className="text-yellow-200 font-bold">{threatDistanceKm} KM</span> | MACH 4.5
+                    DISTANCIA: <span className="text-yellow-200 font-bold">{threatDistanceKm} KM</span> | VELOCIDAD: MACH 4.5
                   </div>
                 </div>
               )}
@@ -384,7 +408,7 @@ export default function App() {
                 onClick={() => handleSpawnThreat()}
                 className="py-3.5 px-4 rounded font-tactical font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/50 hover:border-amber-400 transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)]"
               >
-                <span>🎯</span> LANZAR AMENAZA HOSTIL (BOGEY)
+                <span>🎯</span> LANZAR AMENAZA HOSTIL
               </button>
             </div>
 
@@ -431,7 +455,7 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-[11px] text-slate-400 uppercase tracking-wider">
-                    Tasa gRPC Stream (Hz)
+                    Frecuencia de Transmisión gRPC (Hz)
                   </label>
                   <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
                     {targetHz} Hz ({Math.round(1000/targetHz)} ms)
@@ -447,9 +471,9 @@ export default function App() {
                   className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
-                  <span>5 Hz (Low Bandwidth)</span>
-                  <span>30 Hz (Tactical)</span>
-                  <span>60 Hz (High Precision)</span>
+                  <span>5 Hz (Bajo Ancho de Banda)</span>
+                  <span>30 Hz (Táctico / Normal)</span>
+                  <span>60 Hz (Alta Precisión)</span>
                 </div>
               </div>
             </div>
@@ -503,17 +527,17 @@ export default function App() {
               </div>
               <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1.5">
                 <span>Paquetes procesados: {totalPackets}</span>
-                <span>Ahorro acum: {(totalBytesSaved / 1024).toFixed(1)} KB</span>
+                <span>Ahorro acumulado: {(totalBytesSaved / 1024).toFixed(1)} KB</span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               <div className="bg-slate-900/50 p-2 rounded border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">Stream Real:</span>
+                <span className="text-slate-400">Frecuencia Medida:</span>
                 <span className="text-cyan-400 font-bold">{metrics.measured_hz} Hz</span>
               </div>
               <div className="bg-slate-900/50 p-2 rounded border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400">gRPC Server RPC:</span>
+                <span className="text-slate-400">Latencia Servidor gRPC:</span>
                 <span className="text-emerald-400 font-bold">{unaryLatency.toFixed(3)} ms</span>
               </div>
             </div>
@@ -530,7 +554,7 @@ export default function App() {
                 TELEMETRÍA DE INTERCEPTORES ({telemetry?.drones?.length || 0}/6 ACTIVOS)
               </span>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-                LISTO: {telemetry?.interception_readiness_pct || 98}%
+                DISPONIBILIDAD: {telemetry?.interception_readiness_pct || 98}%
               </span>
             </div>
 
@@ -571,7 +595,7 @@ export default function App() {
                       drone.status === 'LOCKED' ? 'bg-amber-900/60 text-amber-300 border border-amber-700' :
                       'bg-emerald-900/40 text-emerald-300'
                     }`}>
-                      {drone.status}
+                      {translateStatus(drone.status)}
                     </span>
                   </div>
                 </div>
@@ -591,7 +615,7 @@ export default function App() {
               {commandLog.map((log) => (
                 <div key={log.id} className="p-1 rounded bg-slate-900/50 border border-slate-800/80 flex justify-between items-center">
                   <span className="text-slate-400">{log.time}</span>
-                  <span className="text-amber-400 font-bold">{log.action}</span>
+                  <span className="text-amber-400 font-bold">{translateAction(log.action)}</span>
                   <span className="text-slate-300 truncate max-w-[160px]">{log.message}</span>
                   <span className="text-emerald-400">{log.grpc_latency_ms} ms</span>
                 </div>
@@ -626,6 +650,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
       ctx.fillStyle = '#030814'
       ctx.fillRect(0, 0, w, h)
 
+      // 1. Concentric Range Rings
       ctx.strokeStyle = 'rgba(34, 197, 94, 0.2)'
       ctx.lineWidth = 1
       const rings = [0.25, 0.5, 0.75, 1.0]
@@ -640,6 +665,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
         ctx.fillText(`${(rangeKm * fraction).toFixed(0)} km`, centerX + 4, centerY - r + 12)
       })
 
+      // 2. Crosshairs & Angles (N, S, E, O)
       ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)'
       ctx.beginPath()
       ctx.moveTo(centerX - maxRadius, centerY)
@@ -664,8 +690,9 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
       ctx.fillText('N 000°', centerX - 18, centerY - maxRadius + 14)
       ctx.fillText('S 180°', centerX - 18, centerY + maxRadius - 6)
       ctx.fillText('E 090°', centerX + maxRadius - 40, centerY - 4)
-      ctx.fillText('W 270°', centerX - maxRadius + 6, centerY - 4)
+      ctx.fillText('O 270°', centerX - maxRadius + 6, centerY - 4)
 
+      // Center Base Marker
       ctx.fillStyle = '#22c55e'
       ctx.beginPath()
       ctx.arc(centerX, centerY, 4, 0, Math.PI * 2)
@@ -675,6 +702,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
       ctx.arc(centerX, centerY, 8, 0, Math.PI * 2)
       ctx.stroke()
 
+      // 3. Rotating Sweep Cone
       angleRef.current = (angleRef.current + 0.035) % (Math.PI * 2)
       const sweepAngle = angleRef.current
 
@@ -701,6 +729,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
       ctx.stroke()
       ctx.restore()
 
+      // 4. Render Drones
       if (telemetry?.drones) {
         telemetry.drones.forEach((d) => {
           const dx = centerX + d.position.x * scale
@@ -725,6 +754,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
         })
       }
 
+      // 5. Render Threat
       const threat = telemetry?.active_threat
       if (threat) {
         const tx = centerX + threat.position.x * scale
@@ -736,7 +766,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
           ctx.strokeRect(tx - 6, ty - 6, 12, 12)
           ctx.fillStyle = '#94a3b8'
           ctx.font = 'bold 9px monospace'
-          ctx.fillText('KILL', tx + 8, ty + 3)
+          ctx.fillText('NEUTRALIZADO', tx + 8, ty + 3)
         } else {
           const pulse = (Math.sin(Date.now() / 120) + 1) / 2
           const rSize = 7 + pulse * 4
@@ -772,6 +802,7 @@ function TacticalRadarCanvas({ telemetry, rangeKm, onRadarClick, neutralizedAnim
         }
       }
 
+      // 6. Kinetic Shockwave Burst Animation
       if (neutralizedAnim) {
         const burstTime = (Date.now() % 1000) / 1000
         const burstRadius = burstTime * 60

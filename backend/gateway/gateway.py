@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import grpc
 from google.protobuf.json_format import MessageToDict
@@ -297,39 +297,40 @@ async def ws_telemetry(websocket: WebSocket, rate_hz: int = 20):
             await channel.close()
 
 
-# Static files and Catch-all SPA routing
-frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
-dist_path = frontend_dir / "dist"
-assets_path = dist_path / "assets"
+# Ruta absoluta al directorio dist del frontend
+BASE_DIR = Path(__file__).resolve().parent
+# Busca dist en frontend/dist relativo a la raíz del proyecto
+DIST_DIR = None
+possible_paths = [
+    BASE_DIR / "../../frontend/dist",
+    BASE_DIR / "../frontend/dist",
+    Path("/app/frontend/dist"),
+    Path("frontend/dist")
+]
 
-# 1. Mount assets folder if present
-if assets_path.exists():
-    app.mount("/assets", StaticFiles(directory=str(assets_path)), name="dist_assets")
+for p in possible_paths:
+    if p.resolve().exists():
+        DIST_DIR = p.resolve()
+        break
 
-# 2. Mount dist folder if present
-if dist_path.exists():
-    app.mount("/dist", StaticFiles(directory=str(dist_path)), name="dist_static")
+if DIST_DIR and DIST_DIR.exists():
+    # 1. Montar assets
+    assets_dir = DIST_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
-# 3. Catch-all route serving frontend/dist/index.html
-@app.get("/{full_path:path}")
-async def serve_spa_catch_all(full_path: str):
-    """
-    Catch-all route that serves static assets from frontend/dist if found,
-    or returns frontend/dist/index.html for SPA client-side routing.
-    """
-    # Check if a specific file exists in dist (e.g. favicon.svg, icons.svg)
-    candidate_file = dist_path / full_path
-    if full_path and candidate_file.is_file():
-        return FileResponse(str(candidate_file))
+    # 2. Servir index y SPA fallback sin interceptar scripts faltantes
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Si la petición busca un archivo estático específico (.js, .css, etc.) y no está en /assets
+        file_path = DIST_DIR / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        
+        # Si es un asset que no existe, no devolver index.html para evitar el error de MIME type
+        if any(full_path.endswith(ext) for ext in [".js", ".css", ".map", ".json"]):
+            return Response(status_code=404, content="File not found")
 
-    # Return production built index.html from dist
-    dist_index = dist_path / "index.html"
-    if dist_index.exists():
-        return FileResponse(str(dist_index))
+        # Devolver index.html para cualquier ruta de navegación de la SPA
+        return FileResponse(DIST_DIR / "index.html")
 
-    # Fallback to root frontend/index.html if dist is not compiled
-    fallback_index = frontend_dir / "index.html"
-    if fallback_index.exists():
-        return FileResponse(str(fallback_index))
-
-    raise HTTPException(status_code=404, detail="frontend/dist/index.html not found. Run npm run build first.")
