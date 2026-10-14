@@ -302,12 +302,26 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-# Ubicación absoluta de frontend/dist
+# Detecta la raíz del proyecto buscando hacia arriba
 CURRENT_DIR = Path(__file__).resolve().parent
-DIST_DIR = (CURRENT_DIR / "../../frontend/dist").resolve()
 
-if not DIST_DIR.exists():
-    DIST_DIR = (CURRENT_DIR / "../frontend/dist").resolve()
+# Lista de posibles rutas absolutas donde puede quedar frontend/dist
+CANDIDATE_PATHS = [
+    CURRENT_DIR.parent.parent / "frontend" / "dist",  # Si gateway está en backend/gateway/
+    CURRENT_DIR.parent / "frontend" / "dist",         # Si gateway está en backend/
+    Path("/app/frontend/dist"),                       # En contenedor Docker estándar
+    Path("frontend/dist").resolve(),
+]
+
+DIST_DIR = None
+for candidate in CANDIDATE_PATHS:
+    if (candidate / "index.html").exists():
+        DIST_DIR = candidate
+        break
+
+if not DIST_DIR:
+    # Fallback directo al contenedor Docker
+    DIST_DIR = Path("/app/frontend/dist")
 
 # 1. Montar assets
 assets_path = DIST_DIR / "assets"
