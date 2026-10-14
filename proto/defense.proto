@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package defense;
+
+// 3D Cartesian coordinates (in meters relative to defense radar base at [0, 0, 0])
+message Vector3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+// Telemetry streaming subscription request
+message TelemetrySubscription {
+  string airspace_id = 1;
+  int32 update_rate_hz = 2; // Desired update frequency (10 to 60 Hz)
+}
+
+// Individual Drone status and kinematics
+message DroneTelemetry {
+  string drone_id = 1;
+  Vector3D position = 2;
+  double velocity_mach = 3;
+  int32 battery_percentage = 4;
+  string status = 5; // "SEARCHING", "LOCKED", "INTERCEPTING", "RETURNING"
+}
+
+// Hostile threat telemetry
+message ThreatTelemetry {
+  string threat_id = 1;
+  string threat_type = 2; // "HYPERSONIC_MISSILE", "ENEMY_DRONE"
+  Vector3D position = 3;
+  double distance_to_base_meters = 4;
+  bool is_neutralized = 5;
+}
+
+// Aggregate tactical picture of the swarm and threats
+message SwarmStatus {
+  int64 timestamp_epoch_ms = 1;
+  ThreatTelemetry active_threat = 2;
+  repeated DroneTelemetry drones = 3;
+  int32 interception_readiness_pct = 4;
+}
+
+// Tactical action command sent to the swarm
+message TacticalCommandRequest {
+  string command_id = 1;
+  string action = 2; // "ENGAGE", "DEFENSIVE_ORBIT", "ABORT", "SEARCH_PERIMETER"
+  string target_id = 3;
+}
+
+// Tactical action acknowledgment and metrics
+message TacticalCommandResponse {
+  bool success = 1;
+  string message = 2;
+  double latency_ms = 3;
+}
+
+// Tactical Air Defense & Telemetry Control gRPC Service
+service DroneDefenseService {
+  // Server-Streaming RPC: High frequency (10-60 Hz) continuous binary stream
+  rpc StreamSwarmTelemetry (TelemetrySubscription) returns (stream SwarmStatus);
+
+  // Unary RPC: Immediate low-latency tactical order execution
+  rpc ExecuteTacticalCommand (TacticalCommandRequest) returns (TacticalCommandResponse);
+}

@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY proto/ /app/proto/
+COPY backend/grpc_server/ /app/backend/grpc_server/
+
+RUN python /app/backend/grpc_server/compile_proto.py
+
+WORKDIR /app/backend/grpc_server
+EXPOSE 50051
+
+CMD ["python", "server.py"]

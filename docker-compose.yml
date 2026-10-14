@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  grpc_server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.grpc
+    container_name: aegisswarm-grpc-server
+    ports:
+      - "50051:50051"
+    restart: unless-stopped
+    networks:
+      - tactical-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: aegisswarm-gateway
+    environment:
+      - GRPC_SERVER_ADDR=grpc_server:50051
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - grpc_server
+    restart: unless-stopped
+    networks:
+      - tactical-net
+
+networks:
+  tactical-net:
+    driver: bridge
