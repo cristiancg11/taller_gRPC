@@ -297,40 +297,40 @@ async def ws_telemetry(websocket: WebSocket, rate_hz: int = 20):
             await channel.close()
 
 
-# Ruta absoluta al directorio dist del frontend
-BASE_DIR = Path(__file__).resolve().parent
-# Busca dist en frontend/dist relativo a la raíz del proyecto
-DIST_DIR = None
-possible_paths = [
-    BASE_DIR / "../../frontend/dist",
-    BASE_DIR / "../frontend/dist",
-    Path("/app/frontend/dist"),
-    Path("frontend/dist")
-]
+import os
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-for p in possible_paths:
-    if p.resolve().exists():
-        DIST_DIR = p.resolve()
-        break
+# Ubicación absoluta de frontend/dist
+CURRENT_DIR = Path(__file__).resolve().parent
+DIST_DIR = (CURRENT_DIR / "../../frontend/dist").resolve()
 
-if DIST_DIR and DIST_DIR.exists():
-    # 1. Montar assets
-    assets_dir = DIST_DIR / "assets"
-    if assets_dir.exists():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+if not DIST_DIR.exists():
+    DIST_DIR = (CURRENT_DIR / "../frontend/dist").resolve()
 
-    # 2. Servir index y SPA fallback sin interceptar scripts faltantes
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # Si la petición busca un archivo estático específico (.js, .css, etc.) y no está en /assets
-        file_path = DIST_DIR / full_path
-        if full_path and file_path.is_file():
-            return FileResponse(file_path)
-        
-        # Si es un asset que no existe, no devolver index.html para evitar el error de MIME type
-        if any(full_path.endswith(ext) for ext in [".js", ".css", ".map", ".json"]):
-            return Response(status_code=404, content="File not found")
+# 1. Montar assets
+assets_path = DIST_DIR / "assets"
+if assets_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
 
-        # Devolver index.html para cualquier ruta de navegación de la SPA
-        return FileResponse(DIST_DIR / "index.html")
+# 2. Servir index.html en la raíz /
+@app.get("/")
+async def serve_root():
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"error": f"index.html no encontrado en {DIST_DIR}"}
+
+# 3. Catch-all para rutas secundarias de la SPA
+@app.get("/{full_path:path}")
+async def serve_spa_paths(full_path: str):
+    target = DIST_DIR / full_path
+    if target.is_file():
+        return FileResponse(str(target))
+    index_file = DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"error": "Frontend no compilado"}
+
 
